@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import PortfolioTable from "./components/PortfolioTable";
+import SectorSummary from "./components/SectorSummary";
+
 
 
 type Stock = {
@@ -67,7 +69,9 @@ export default function Home() {
         Portfolio Dashboard
       </h1>
 
+      <SectorSummary stocks={stocks} />
       <PortfolioTable data={stocks} />
+
     </main>
   );
 
