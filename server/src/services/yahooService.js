@@ -1,16 +1,24 @@
 import YahooFinance from "yahoo-finance2";
 
-// create client instance
 const yahooFinance = new YahooFinance();
 
 export async function getCMP(symbol) {
   try {
+
     const quote = await yahooFinance.quote(symbol);
 
-    return quote.regularMarketPrice;
+    if (!quote) return null;
+
+    // try multiple possible price fields
+    return (
+      quote.regularMarketPrice ||
+      quote.postMarketPrice ||
+      quote.preMarketPrice ||
+      null
+    );
 
   } catch (error) {
-    console.error("Yahoo fetch error:", error.message);
+    console.error(`Yahoo fetch error for ${symbol}:`, error.message);
     return null;
   }
 }
