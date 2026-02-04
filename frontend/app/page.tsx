@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import PortfolioTable from "./components/PortfolioTable";
 import SectorSummary from "./components/SectorSummary";
+import Charts from "./components/Charts";
+
 
 
 
@@ -68,7 +70,7 @@ export default function Home() {
       <h1 className="text-2xl font-bold mb-4">
         Portfolio Dashboard
       </h1>
-
+      <Charts stocks={stocks} />
       <SectorSummary stocks={stocks} />
       <PortfolioTable data={stocks} />
 
