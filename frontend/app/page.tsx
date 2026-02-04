@@ -25,41 +25,50 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
 
   async function fetchStocks() {
-  try {
-    setLoading(true);
+    try {
+      setLoading(true);
 
-    const res = await fetch("http://localhost:5000/api/stocks");
-    const data = await res.json();
+      const res = await fetch("http://localhost:5000/api/stocks");
+      const data = await res.json();
 
-    setStocks(data.data);
+      setStocks(data.data);
 
-  } catch (error) {
-    console.error("Fetch error:", error);
-  } finally {
-    setLoading(false);
+    } catch (error) {
+      console.error("Fetch error:", error);
+    } finally {
+      setLoading(false);
+    }
   }
-}
 
 
   useEffect(() => {
-  const loadData = async () => {
-    await fetchStocks();
-  };
 
-  loadData();
-}, []);
+    // initial load
+    fetchStocks();
+
+    // refresh every 15 seconds
+    const interval = setInterval(() => {
+      fetchStocks();
+    }, 15000);
+
+    // cleanup when component unmounts
+    return () => clearInterval(interval);
+
+  }, []);
+
+
 
 
   if (loading) return <p className="p-10">Loading...</p>;
 
   return (
-  <main className="p-10">
-    <h1 className="text-2xl font-bold mb-4">
-      Portfolio Dashboard
-    </h1>
+    <main className="p-10">
+      <h1 className="text-2xl font-bold mb-4">
+        Portfolio Dashboard
+      </h1>
 
-    <PortfolioTable data={stocks} />
-  </main>
-);
+      <PortfolioTable data={stocks} />
+    </main>
+  );
 
 }
