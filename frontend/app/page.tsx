@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import PortfolioTable from "./components/PortfolioTable";
+
 
 type Stock = {
   name: string;
@@ -51,16 +53,13 @@ export default function Home() {
   if (loading) return <p className="p-10">Loading...</p>;
 
   return (
-    <main className="p-10">
+  <main className="p-10">
+    <h1 className="text-2xl font-bold mb-4">
+      Portfolio Dashboard
+    </h1>
 
-      <h1 className="text-2xl font-bold mb-4">
-        Portfolio Dashboard
-      </h1>
+    <PortfolioTable data={stocks} />
+  </main>
+);
 
-      <pre className="bg-gray-100 p-4 rounded">
-        {JSON.stringify(stocks, null, 2)}
-      </pre>
-
-    </main>
-  );
 }
