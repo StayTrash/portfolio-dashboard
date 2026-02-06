@@ -1,35 +1,183 @@
-# Technical Document: Portfolio Dashboard
+# Dynamic Portfolio Dashboard - Technical Document
 
-## Introduction
-This document outlines the technical challenges faced during the development of the Dynamic Portfolio Dashboard and the solutions implemented to address them.
+## 1. Introduction
 
-## Key Challenges & Solutions
+The **Dynamic Portfolio Dashboard** is a full-stack web application designed to provide real-time insights into a user’s stock portfolio. The system fetches live market prices, calculates investment metrics, groups holdings by sector, and visualizes performance using interactive charts.
 
-### 1. Lack of Official Financial APIs
-**Challenge:** Both Yahoo Finance and Google Finance do not provide free, official public APIs for real-time data.
-**Solution:**
-- **Yahoo Finance:** Used the `yahoo-finance2` library (unofficial) which reverse-engineers the internal API calls used by the Yahoo Finance website.
-- **Google Finance:** Implemented web scraping using `axios` and `cheerio`. The application requests the specific stock page and parses the HTML to extract the "P/E Ratio" and "Latest Earnings" from specific DOM elements (`data-test` attributes).
+The application was developed using:
+- **Next.js** with TypeScript for the frontend
+- **Node.js** for the backend
+- **Tailwind CSS** for styling
 
-### 2. Rate Limiting & Performance
-**Challenge:** Frequent scraping or API calls can lead to IP bans or rate limits from the providers.
-**Solution:**
-- **Caching:** Implemented a simple in-memory cache on the server. Although the requirement is to update every 15 seconds, the server serves the cached data if multiple requests come within a short processing window, ensuring we don't over-fetch.
-- **Batch Processing:** Data fetching is done in parallel using `Promise.all` to minimize the total wait time for the user, rather than sequential fetching.
+Live financial data is retrieved using unofficial APIs and scraping techniques due to the absence of official public APIs from Yahoo Finance and Google Finance.
 
-### 3. Asynchronous Data Consistency
-**Challenge:** Combining data from two different sources (Yahoo and Google) for a single stock entity.
-**Solution:**
-- The backend performs the data aggregation. It iterates through the static portfolio list, triggers async fetches for both sources, and awaits all promises to resolve before calculating the portfolio metrics (Investment, Present Value, Gain/Loss). This ensures the frontend always receives a complete, consistent dataset.
+## 2. System Architecture
 
-### 4. Real-time Updates in Frontend
-**Challenge:** Keeping the dashboard updated without refreshing the page.
-**Solution:**
-- Used `useEffect` with `setInterval` in the Next.js `page.tsx` to poll the backend API every 15 seconds.
-- React's state management ensures that only the changed values trigger a re-render of the relevant table rows and summary components.
+The application follows a client-server architecture:
 
-## Tech Stack Decisions
+```mermaid
+graph TD
+    Client[Frontend (Next.js)] -->|Request| API[Backend API (Node.js)]
+    API -->|Fetch CMP| YF[Yahoo Finance]
+    API -->|Scrape Data| GF[Google Finance]
+    API -->|Store/Retrieve| Cache[Caching Layer]
+```
 
-- **Next.js (Frontend):** Chosen for its robust routing and server-side capabilities, though currently used primarily for client-side rendering (CSR) to handle the live intervals efficiently.
-- **Tailwind CSS:** Enabled rapid UI development with utility classes, making it easy to implement the responsive design and conditional formatting (Red/Green colors).
-- **Node.js/Express (Backend):** separated the scraping logic from the client to avoid CORS issues and to abstract the complexity of multiple data sources into a single clean API (`/api/stocks`).
+### Frontend Responsibilities
+- Display portfolio table
+- Show sector summaries
+- Render charts
+- Trigger periodic data refresh
+
+### Backend Responsibilities
+- Fetch live CMP from Yahoo Finance
+- Scrape Google Finance for P/E ratio and earnings
+- Perform portfolio calculations
+- Manage caching
+- Handle errors
+
+## 3. Data Flow
+
+1. **Request**: Frontend sends request to `/api/stocks`.
+2. **Cache Check**: Backend checks if valid data exists in the cache.
+   - If **cached data exists** → Return immediate response.
+   - If **no cache** → Proceed to fetch data.
+3. **Data Fetching**:
+   - Fetch CMP from Yahoo Finance.
+   - Scrape Google Finance for additional metrics.
+4. **Processing**:
+   - Transform raw data.
+   - Perform portfolio calculations (Service Layer).
+5. **Response**:
+   - Store result in cache.
+   - Send structured JSON to frontend.
+
+## 4. Real-Time Update Mechanism
+
+To ensure live market updates, the frontend uses `setInterval` within React’s `useEffect` hook.
+
+**Process:**
+1. Initial fetch occurs on page load.
+2. Subsequent fetches occur every **15 seconds**.
+3. React state updates trigger UI re-render.
+
+This approach ensures real-time updates and a smooth user experience without full page reloads.
+
+## 5. API Strategy
+
+### Yahoo Finance
+Since Yahoo Finance does not offer an official API, the project uses the `yahoo-finance2` unofficial library to retrieve:
+- **Current Market Price (CMP)**
+
+*Fallback logic is implemented to handle missing price fields.*
+
+### Google Finance
+Google Finance does not provide an API. The project uses:
+- **Axios** to fetch HTML pages.
+- **Cheerio** to parse DOM elements.
+
+**Scraping Targets:**
+- P/E Ratio
+- Latest Earnings
+
+*If data is unavailable, safe fallback values (`null`) are returned.*
+
+## 6. Data Transformation & Calculations
+
+The backend cleans and structures raw API responses into a standardized stock object. Calculations are centralized in a service layer.
+
+**Calculated Metrics:**
+- **Investment** = `Purchase Price` × `Quantity`
+- **Present Value** = `CMP` × `Quantity`
+- **Gain/Loss** = `Present Value` − `Investment`
+- **Portfolio %** = (`Investment` / `Total Investment`) × 100
+
+## 7. Caching Strategy
+
+An in-memory cache is implemented with:
+- Cached data storage
+- Timestamp tracking
+- **15-second expiration**
+
+**Benefits:**
+- Reduced API calls
+- Avoids rate limiting
+- Faster response times
+
+*The design allows easy migration to Redis for scalable environments.*
+
+## 8. Performance Optimization
+
+- **Parallel API Calls**: Utilizing `Promise.all` for concurrent data fetching.
+- **Backend Caching**: Minimized redundant external requests.
+- **Efficient React Rendering**: Optimized state updates.
+- **Responsive UI**: Fast loading components using Tailwind CSS.
+- *Future*: Optional memoization for large datasets.
+
+## 9. Error Handling
+
+All external API interactions are wrapped in `try/catch` blocks.
+
+**Resilience Strategy:**
+- System continues to function even if individual data points fail.
+- Fallback values are returned.
+- No server crashes occur.
+- Frontend displays unavailable data as **N/A**.
+
+## 10. Security Considerations
+
+- **No Exposure**: No API keys or sensitive configurations are exposed on the client side.
+- **Server-Side Execution**: Scraping and unofficial API calls are handled strictly on the server.
+- **CORS**: Configured safely to prevent unauthorized cross-origin requests.
+
+## 11. Sector Grouping
+
+Stocks are grouped by sector in the frontend to mirror real-world portfolio management.
+
+**Per Sector Metrics:**
+- Total Investment
+- Total Present Value
+- Total Gain/Loss
+
+## 12. Data Visualization
+
+Charts are implemented using **Recharts**:
+
+- **Pie Chart**: Displays portfolio distribution by stock.
+- **Bar Chart**: Displays sector-wise gain/loss performance.
+
+These visuals facilitate quick understanding of portfolio trends and performance.
+
+## 13. Responsiveness
+
+The dashboard layout adapts to different screen sizes using:
+- **Tailwind CSS** utility classes.
+- Responsive containers for charts.
+- Scrollable tables for mobile views.
+
+## 14. Technical Challenges & Solutions
+
+| Challenge | Solution |
+|-----------|----------|
+| **No Official APIs** | Used unofficial libraries (`yahoo-finance2`) and scraping (`cheerio`) with fallback handling. |
+| **Rate Limiting** | Implemented backend caching to limit frequency of external requests. |
+| **Data Inconsistency** | Added defensive checks and null handling to prevent crashes. |
+| **Real-Time Updates** | Periodic frontend polling using `setInterval` (15s). |
+
+## 15. Future Enhancements
+
+- **Redis Caching**: For distributed and persistent caching.
+- **WebSockets**: For true real-time streaming instead of polling.
+- **User Customization**: Allow users to add/maintain their own portfolios.
+- **Authentication**: User accounts and secure data persistence.
+
+## 16. Conclusion
+
+The **Dynamic Portfolio Dashboard** successfully implements all required features:
+- Real-time updates
+- Sector grouping & Calculations
+- Performance optimizations
+- Error handling
+- Interactive UI
+
+The system demonstrates proficiency in full-stack development, managing unstable external data sources, implementing performance strategies, and delivering a responsive, modern user experience.
