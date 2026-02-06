@@ -28,7 +28,7 @@ export default function Home() {
 
   async function fetchStocks() {
     try {
-      setLoading(true);
+      // setLoading(true); // Don't set loading to true on refresh to avoid UI flicker
 
       const res = await fetch("http://localhost:5000/api/stocks");
       const data = await res.json();
